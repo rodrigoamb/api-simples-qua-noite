@@ -1,0 +1,14 @@
+Express -> Biblioteca Node.js para criar APIs RESTful de forma rápida e fácil.
+
+dotenv -> Módulo para carregar variáveis de ambiente a partir de um arquivo .env.
+
+bcryptjs -> Biblioteca para hashing de senhas.
+jsonwebtoken -> Biblioteca para criar e verificar tokens JWT.
+
+cors -> Middleware para habilitar CORS (Cross-Origin Resource Sharing) em aplicações Express.
+
+pg -> Cliente PostgreSQL para Node.js.
+
+
+O que é o .gitignore e por que é importante?
+O .gitignore é um arquivo de texto usado em projetos Git para especificar quais arquivos ou diretórios devem ser ignorados pelo sistema de controle de versão. Ele é importante porque ajuda a evitar que arquivos sensíveis, temporários ou desnecessários sejam incluídos no repositório, mantendo o repositório limpo e seguro. 
