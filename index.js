@@ -134,6 +134,18 @@ app.post("/api/auth/login", async (req, res) => {
   });
 });
 
+app.get("/api/user", async (req, res) => {
+  const { id } = req.body;
+
+  const result = await db.query(`SELECT * FROM users WHERE id = $1`, [id]);
+
+  if (!result.rows[0]) {
+    return res.status(404).json({ message: "Usuário não encontrado" });
+  }
+
+  res.json(result.rows[0]);
+});
+
 // Criando o servidor da API
 
 app.listen(PORT, () => {
