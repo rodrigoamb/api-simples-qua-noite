@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const { Client } = require("pg");
+const bcrypt = require("bcrypt");
 
 //config inicial
 const app = express();
@@ -65,7 +66,31 @@ app.post("/api/auth/register", async (req, res) => {
       .json({ message: "name, email e password são obrigatórios" });
   }
 
-  console.log("segue o código");
+  try {
+    //Verifica se o email existe no banco
+    const emailExists = await db.query(`SELECT * FROM users WHERE email = $1`, [
+      email,
+    ]);
+
+    if (emailExists.rows.length > 0) {
+      res.status(400).json({ message: "Email já cadastrado no sistema" });
+    }
+
+    const hashPassword = await bcrypt.hash(password, 10);
+
+    const result = await db.query(
+      `INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email`,
+      [name, email, hashPassword]
+    );
+
+    res.status(201).json({
+      message: "Usuário criado com sucesso",
+      user: result.rows[0],
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ message: "Erro ao criar o usuário" }, error);
+  }
 });
 
 // Criando o servidor da API
