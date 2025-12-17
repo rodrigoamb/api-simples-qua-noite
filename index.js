@@ -2,12 +2,15 @@ const express = require("express");
 const dotenv = require("dotenv");
 const { Client } = require("pg");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 //config inicial
 const app = express();
 dotenv.config();
 
 const PORT = process.env.PORT;
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
 
 app.use(express.json());
 
@@ -91,6 +94,44 @@ app.post("/api/auth/register", async (req, res) => {
     console.error(error);
     res.status(400).json({ message: "Erro ao criar o usuário" }, error);
   }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email e senha são obrigatórios" });
+  }
+
+  //verificar email
+  const result = await db.query(`SELECT * FROM users WHERE email = $1`, [
+    email,
+  ]);
+
+  const user = result.rows[0];
+
+  if (!user) {
+    return res.status(401).json({ message: "Usuário não encontrado" });
+  }
+
+  //verificar senha
+  const validPassword = await bcrypt.compare(password, user.password);
+
+  if (!validPassword) {
+    return res.status(401).json({ message: "Senha incorreta" });
+  }
+
+  const token = jwt.sign(
+    { id: user.id, name: user.name, email: user.email },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+
+  res.json({
+    message: "Login feito com sucesso",
+    token,
+    user: { id: user.id, name: user.name, email: user.email },
+  });
 });
 
 // Criando o servidor da API
