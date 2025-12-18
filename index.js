@@ -221,6 +221,62 @@ app.post("/api/tasks/createanewtask", authenticateToken, async (req, res) => {
   });
 });
 
+//editar tarefa
+app.put("/api/tasks/updatetask/:id", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const taskId = req.params.id;
+  const { title, description, completed } = req.body;
+
+  const existingTask = await db.query(
+    `SELECT * FROM tasks WHERE id=$1 AND user_id=$2`,
+    [taskId, userId]
+  );
+
+  if (!existingTask.rows[0]) {
+    return res.status(404).json({ message: "Tarefa não encontrada" });
+  }
+
+  const result = await db.query(
+    `
+      UPDATE tasks
+      SET 
+      title = $1,
+      description = $2,
+      completed = $3,
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4 AND user_id = $5 
+      RETURNING *
+    `,
+    [title, description, completed, taskId, userId]
+  );
+
+  return res.json({
+    message: "Tarefa editada com sucesso",
+    task: result.rows[0],
+  });
+});
+
+app.delete("/api/tasks/deletetask/:id", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const taskId = req.params.id;
+
+  const existingTask = await db.query(
+    `SELECT * FROM tasks WHERE id=$1 AND user_id=$2`,
+    [taskId, userId]
+  );
+
+  if (!existingTask.rows[0]) {
+    return res.status(404).json({ message: "Tarefa não encontrada" });
+  }
+
+  await db.query("DELETE FROM tasks WHERE id = $1 AND user_id = $2", [
+    taskId,
+    userId,
+  ]);
+
+  return res.json({ message: "Tarefa deletado com sucesso" });
+});
+
 // Criando o servidor da API
 
 app.listen(PORT, () => {
