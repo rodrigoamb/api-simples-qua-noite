@@ -58,6 +58,30 @@ db.connect()
     console.error("Erro ao conectar com o banco", error);
   });
 
+// ---- MIDDLEWARE ----
+
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res
+      .status(401)
+      .json({ message: "Acesso negado. Token não enviado." });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: "Token inválido" });
+    }
+
+    req.user = user;
+
+    next();
+  });
+}
+
 // ----- ROTAS DE AUTENTICAÇÃO -------
 
 app.post("/api/auth/register", async (req, res) => {
@@ -134,7 +158,7 @@ app.post("/api/auth/login", async (req, res) => {
   });
 });
 
-app.get("/api/user", async (req, res) => {
+app.get("/api/user", authenticateToken, async (req, res) => {
   const { id } = req.body;
 
   const result = await db.query(`SELECT * FROM users WHERE id = $1`, [id]);
@@ -144,6 +168,57 @@ app.get("/api/user", async (req, res) => {
   }
 
   res.json(result.rows[0]);
+});
+
+// ----- TASKS -----
+
+//rota que trás todas as tarefas
+app.get("/api/tasks/getalltasks", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const result = await db.query(`SELECT * FROM tasks WHERE user_id = $1`, [
+    userId,
+  ]);
+
+  return res.json(result.rows);
+});
+
+//rota que trás a tarefa por id
+app.get("/api/tasks/gettaskbyid/:id", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const taskId = req.params.id;
+
+  const result = await db.query(
+    `SELECT * FROM tasks WHERE id = $1 AND user_id = $2`,
+    [taskId, userId]
+  );
+
+  if (!result.rows[0]) {
+    return res.status(404).json({ message: "Tarefa não encontrada" });
+  }
+
+  return res.json(result.rows[0]);
+});
+
+//criar tarefa
+app.post("/api/tasks/createanewtask", authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+  const { title, description } = req.body;
+
+  if (!title) {
+    return res
+      .status(400)
+      .json({ message: "O título da terefa é obrigatório" });
+  }
+
+  const result = await db.query(
+    `INSERT INTO tasks (user_id, title, description) VALUES ($1,$2,$3)`,
+    [userId, title, description || null]
+  );
+
+  return res.status(201).json({
+    message: "Tarefa criada com sucesso",
+    task: result.rows[0],
+  });
 });
 
 // Criando o servidor da API
